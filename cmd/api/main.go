@@ -9,9 +9,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/gocli/social_api/internal/database"
 	"github.com/gocli/social_api/internal/handlers"
-	"github.com/gocli/social_api/internal/middleware"
+	authmiddleware "github.com/gocli/social_api/internal/middleware"
 	"github.com/gocli/social_api/internal/repositories"
 	"github.com/gocli/social_api/internal/services"
 	"github.com/gocli/social_api/internal/utils"
@@ -63,67 +66,70 @@ func main() {
 	commentHandler := handlers.NewCommentHandler(commentService, validator)
 
 	// Setup routes
-	router := http.NewServeMux()
+	router := chi.NewRouter()
+
+	// Middleware
+	router.Use(middleware.RequestID)
+	router.Use(middleware.RealIP)
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
 
 	// Health check endpoint
-	router.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSONResponse(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 
 	// Auth routes
-	router.HandleFunc("POST /api/v1/auth/register", authHandler.Register)
-	router.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
-	router.HandleFunc("POST /api/v1/auth/refresh", authHandler.RefreshToken)
-	router.HandleFunc("POST /api/v1/auth/logout", authHandler.Logout)
+	router.Post("/api/v1/auth/register", authHandler.Register)
+	router.Post("/api/v1/auth/login", authHandler.Login)
+	router.Post("/api/v1/auth/refresh", authHandler.RefreshToken)
+	router.Post("/api/v1/auth/logout", authHandler.Logout)
 
 	// Protected routes
-	protectedRouter := http.NewServeMux()
+	router.Group(func(r chi.Router) {
+		r.Use(authmiddleware.AuthMiddleware(authService))
 
-	// User routes
-	protectedRouter.HandleFunc("GET /api/v1/users/{userId}", userHandler.GetUserProfile)
-	protectedRouter.HandleFunc("GET /api/v1/users/search", userHandler.SearchUsers)
-	protectedRouter.HandleFunc("GET /api/v1/me", userHandler.GetMe)
-	protectedRouter.HandleFunc("PUT /api/v1/me", userHandler.UpdateMe)
-	protectedRouter.HandleFunc("PATCH /api/v1/me", userHandler.PartialUpdateMe)
+		// User routes
+		r.Get("/api/v1/users/{userId}", userHandler.GetUserProfile)
+		r.Get("/api/v1/users/search", userHandler.SearchUsers)
+		r.Get("/api/v1/me", userHandler.GetMe)
+		r.Put("/api/v1/me", userHandler.UpdateMe)
+		r.Patch("/api/v1/me", userHandler.PartialUpdateMe)
+		r.Post("/api/v1/me/profile-picture", userHandler.UploadProfilePicture)
 
-	// Friend routes
-	protectedRouter.HandleFunc("GET /api/v1/users/{userId}/friends", friendHandler.GetUserFriends)
-	protectedRouter.HandleFunc("GET /api/v1/me/friend-requests", friendHandler.GetMyFriendRequests)
-	protectedRouter.HandleFunc("POST /api/v1/users/{userId}/friend-requests", friendHandler.SendFriendRequest)
-	protectedRouter.HandleFunc("POST /api/v1/friend-requests/{requestId}/accept", friendHandler.AcceptFriendRequest)
-	protectedRouter.HandleFunc("POST /api/v1/friend-requests/{requestId}/reject", friendHandler.RejectFriendRequest)
-	protectedRouter.HandleFunc("DELETE /api/v1/users/{userId}/friends", friendHandler.UnfriendUser)
+		// Friend routes
+		r.Get("/api/v1/users/{userId}/friends", friendHandler.GetUserFriends)
+		r.Get("/api/v1/me/friend-requests", friendHandler.GetMyFriendRequests)
+		r.Post("/api/v1/users/{userId}/friend-requests", friendHandler.SendFriendRequest)
+		r.Post("/api/v1/friend-requests/{requestId}/accept", friendHandler.AcceptFriendRequest)
+		r.Post("/api/v1/friend-requests/{requestId}/reject", friendHandler.RejectFriendRequest)
+		r.Delete("/api/v1/users/{userId}/friends", friendHandler.UnfriendUser)
 
-	// Post routes
-	protectedRouter.HandleFunc("POST /api/v1/posts", postHandler.CreatePost)
-	protectedRouter.HandleFunc("GET /api/v1/feed", postHandler.GetFeed)
-	protectedRouter.HandleFunc("GET /api/v1/users/{userId}/posts", postHandler.GetUserPosts)
-	protectedRouter.HandleFunc("GET /api/v1/posts/{postId}", postHandler.GetPost)
-	protectedRouter.HandleFunc("PUT /api/v1/posts/{postId}", postHandler.UpdatePost)
-	protectedRouter.HandleFunc("DELETE /api/v1/posts/{postId}", postHandler.DeletePost)
+		// Post routes
+		r.Post("/api/v1/posts", postHandler.CreatePost)
+		r.Get("/api/v1/feed", postHandler.GetFeed)
+		r.Get("/api/v1/users/{userId}/posts", postHandler.GetUserPosts)
+		r.Get("/api/v1/posts/{postId}", postHandler.GetPost)
+		r.Put("/api/v1/posts/{postId}", postHandler.UpdatePost)
+		r.Delete("/api/v1/posts/{postId}", postHandler.DeletePost)
 
-	// Album routes
-	protectedRouter.HandleFunc("POST /api/v1/me/albums", albumHandler.CreateAlbum)
-	protectedRouter.HandleFunc("GET /api/v1/users/{userId}/albums", albumHandler.GetUserAlbums)
-	protectedRouter.HandleFunc("GET /api/v1/albums/{albumId}", albumHandler.GetAlbum)
-	protectedRouter.HandleFunc("PUT /api/v1/albums/{albumId}", albumHandler.UpdateAlbum)
-	protectedRouter.HandleFunc("DELETE /api/v1/albums/{albumId}", albumHandler.DeleteAlbum)
+		// Album routes
+		r.Post("/api/v1/me/albums", albumHandler.CreateAlbum)
+		r.Get("/api/v1/users/{userId}/albums", albumHandler.GetUserAlbums)
+		r.Get("/api/v1/albums/{albumId}", albumHandler.GetAlbum)
+		r.Put("/api/v1/albums/{albumId}", albumHandler.UpdateAlbum)
+		r.Delete("/api/v1/albums/{albumId}", albumHandler.DeleteAlbum)
 
-	// Like routes
-	protectedRouter.HandleFunc("POST /api/v1/{resourceType}/{resourceId}/like", likeHandler.LikeResource)
-	protectedRouter.HandleFunc("DELETE /api/v1/{resourceType}/{resourceId}/like", likeHandler.UnlikeResource)
-	protectedRouter.HandleFunc("GET /api/v1/{resourceType}/{resourceId}/likes", likeHandler.GetLikesForResource)
+		// Like routes
+		r.Post("/api/v1/{resourceType}/{resourceId}/like", likeHandler.LikeResource)
+		r.Delete("/api/v1/{resourceType}/{resourceId}/like", likeHandler.UnlikeResource)
+		r.Get("/api/v1/{resourceType}/{resourceId}/likes", likeHandler.GetLikesForResource)
 
-	// Comment routes
-	protectedRouter.HandleFunc("POST /api/v1/{resourceType}/{resourceId}/comments", commentHandler.CreateComment)
-	protectedRouter.HandleFunc("GET /api/v1/{resourceType}/{resourceId}/comments", commentHandler.GetCommentsForResource)
-	protectedRouter.HandleFunc("DELETE /api/v1/comments/{commentId}", commentHandler.DeleteComment)
-
-	// Apply middleware to protected routes
-	protectedHandler := middleware.AuthMiddleware(protectedRouter, authService)
-
-	// Mount protected routes
-	router.Handle("/", protectedHandler)
+		// Comment routes
+		r.Post("/api/v1/{resourceType}/{resourceId}/comments", commentHandler.CreateComment)
+		r.Get("/api/v1/{resourceType}/{resourceId}/comments", commentHandler.GetCommentsForResource)
+		r.Delete("/api/v1/comments/{commentId}", commentHandler.DeleteComment)
+	})
 
 	// Create HTTP server
 	server := &http.Server{

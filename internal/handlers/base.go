@@ -23,17 +23,6 @@ func (h *BaseHandler) GetUserIDFromContext(r *http.Request) (int, error) {
 	return userID, nil
 }
 
-// ParseIDFromPath parses an ID from the URL path
-func (h *BaseHandler) ParseIDFromPath(r *http.Request, param string) (int, error) {
-	// In a real implementation, you would use a router that supports path parameters
-	// For simplicity, we'll return a fixed value here
-	// In practice, you would use something like:
-	// vars := mux.Vars(r)
-	// idStr := vars[param]
-	idStr := "1" // Placeholder
-	return strconv.Atoi(idStr)
-}
-
 // ParseQueryInt parses an integer from query parameters
 func (h *BaseHandler) ParseQueryInt(r *http.Request, param string, defaultValue int) int {
 	valueStr := r.URL.Query().Get(param)

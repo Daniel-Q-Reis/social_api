@@ -3,6 +3,9 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/gocli/social_api/internal/services"
 	"github.com/gocli/social_api/internal/utils"
@@ -33,10 +36,13 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse resource type and ID from path
-	// In a real implementation, you would use a router that supports path parameters
-	// For simplicity, we'll use placeholder values
-	resourceType := "posts" // Placeholder
-	resourceID := 1         // Placeholder
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceIDStr := chi.URLParam(r, "resourceId")
+	resourceID, err := strconv.Atoi(resourceIDStr)
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid resource ID"})
+		return
+	}
 
 	// Parse request body
 	var req struct {
@@ -68,10 +74,13 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 // GetCommentsForResource handles getting comments for a resource
 func (h *CommentHandler) GetCommentsForResource(w http.ResponseWriter, r *http.Request) {
 	// Parse resource type and ID from path
-	// In a real implementation, you would use a router that supports path parameters
-	// For simplicity, we'll use placeholder values
-	resourceType := "posts" // Placeholder
-	resourceID := 1         // Placeholder
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceIDStr := chi.URLParam(r, "resourceId")
+	resourceID, err := strconv.Atoi(resourceIDStr)
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid resource ID"})
+		return
+	}
 
 	// Get comments for the resource
 	comments, err := h.commentService.GetCommentsForResource(resourceType, resourceID)
@@ -94,9 +103,12 @@ func (h *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse comment ID from path
-	// In a real implementation, you would use a router that supports path parameters
-	// For simplicity, we'll use placeholder values
-	commentID := 1 // Placeholder
+	commentIDStr := chi.URLParam(r, "commentId")
+	commentID, err := strconv.Atoi(commentIDStr)
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid comment ID"})
+		return
+	}
 
 	// Delete comment
 	if err := h.commentService.DeleteComment(commentID, userID); err != nil {

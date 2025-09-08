@@ -3,6 +3,9 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/gocli/social_api/internal/services"
 	"github.com/gocli/social_api/internal/utils"
@@ -33,10 +36,13 @@ func (h *LikeHandler) LikeResource(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse resource type and ID from path
-	// In a real implementation, you would use a router that supports path parameters
-	// For simplicity, we'll use placeholder values
-	resourceType := "posts" // Placeholder
-	resourceID := 1         // Placeholder
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceIDStr := chi.URLParam(r, "resourceId")
+	resourceID, err := strconv.Atoi(resourceIDStr)
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid resource ID"})
+		return
+	}
 
 	// Like the resource
 	if err := h.likeService.LikeResource(userID, resourceType, resourceID); err != nil {
@@ -58,10 +64,13 @@ func (h *LikeHandler) UnlikeResource(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse resource type and ID from path
-	// In a real implementation, you would use a router that supports path parameters
-	// For simplicity, we'll use placeholder values
-	resourceType := "posts" // Placeholder
-	resourceID := 1         // Placeholder
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceIDStr := chi.URLParam(r, "resourceId")
+	resourceID, err := strconv.Atoi(resourceIDStr)
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid resource ID"})
+		return
+	}
 
 	// Unlike the resource
 	if err := h.likeService.UnlikeResource(userID, resourceType, resourceID); err != nil {
@@ -76,10 +85,13 @@ func (h *LikeHandler) UnlikeResource(w http.ResponseWriter, r *http.Request) {
 // GetLikesForResource handles getting likes for a resource
 func (h *LikeHandler) GetLikesForResource(w http.ResponseWriter, r *http.Request) {
 	// Parse resource type and ID from path
-	// In a real implementation, you would use a router that supports path parameters
-	// For simplicity, we'll use placeholder values
-	resourceType := "posts" // Placeholder
-	resourceID := 1         // Placeholder
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceIDStr := chi.URLParam(r, "resourceId")
+	resourceID, err := strconv.Atoi(resourceIDStr)
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid resource ID"})
+		return
+	}
 
 	// Get likes for the resource
 	likes, err := h.likeService.GetLikesForResource(resourceType, resourceID)

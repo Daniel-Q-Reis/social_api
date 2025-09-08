@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/gocli/social_api/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,8 +20,8 @@ func TestHealthEndpoint(t *testing.T) {
 	}
 
 	// Create test server with just the health endpoint
-	router := http.NewServeMux()
-	router.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+	router := chi.NewRouter()
+	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		utils.SendJSONResponse(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 

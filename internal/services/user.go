@@ -37,6 +37,25 @@ func (s *UserService) UpdateUser(user *models.User) error {
 	return nil
 }
 
+// UpdateProfilePictureURL updates a user's profile picture URL
+func (s *UserService) UpdateProfilePictureURL(userID int, profilePictureURL string) error {
+	// First get the user
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	// Update the profile picture URL
+	user.ProfilePictureURL = profilePictureURL
+
+	// Save the user
+	if err := s.userRepo.Update(user); err != nil {
+		return fmt.Errorf("failed to update user profile picture: %w", err)
+	}
+
+	return nil
+}
+
 // SearchUsers searches for users by query
 func (s *UserService) SearchUsers(query string, limit, offset int) ([]*models.UserPublic, error) {
 	users, err := s.userRepo.Search(query, limit, offset)

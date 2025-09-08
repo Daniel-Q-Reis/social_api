@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/gocli/social_api/internal/services"
 	"github.com/gocli/social_api/internal/utils"
@@ -87,7 +90,8 @@ func (h *PostHandler) GetFeed(w http.ResponseWriter, r *http.Request) {
 // GetUserPosts handles getting a user's posts
 func (h *PostHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	// Parse user ID from path
-	userID, err := h.ParseIDFromPath(r, "userId")
+	userIDStr := chi.URLParam(r, "userId")
+	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
 		return
@@ -112,7 +116,8 @@ func (h *PostHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 // GetPost handles getting a single post
 func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 	// Parse post ID from path
-	postID, err := h.ParseIDFromPath(r, "postId")
+	postIDStr := chi.URLParam(r, "postId")
+	postID, err := strconv.Atoi(postIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid post ID"})
 		return
@@ -139,7 +144,8 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse post ID from path
-	postID, err := h.ParseIDFromPath(r, "postId")
+	postIDStr := chi.URLParam(r, "postId")
+	postID, err := strconv.Atoi(postIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid post ID"})
 		return
@@ -147,12 +153,18 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 	// Parse request body
 	var req struct {
-		Content string `json:"content"`
+		Content string `json:"content" validate:"required"`
 		Privacy string `json:"privacy"`
 	}
 
 	if err := h.DecodeJSONBody(w, r, &req); err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		return
+	}
+
+	// Validate request
+	if err := h.validator.Validate(req); err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]interface{}{"error": "Validation failed", "details": err})
 		return
 	}
 
@@ -177,7 +189,8 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse post ID from path
-	postID, err := h.ParseIDFromPath(r, "postId")
+	postIDStr := chi.URLParam(r, "postId")
+	postID, err := strconv.Atoi(postIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid post ID"})
 		return

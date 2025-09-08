@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/gocli/social_api/internal/services"
 	"github.com/gocli/social_api/internal/utils"
@@ -63,7 +66,8 @@ func (h *AlbumHandler) CreateAlbum(w http.ResponseWriter, r *http.Request) {
 // GetUserAlbums handles getting a user's albums
 func (h *AlbumHandler) GetUserAlbums(w http.ResponseWriter, r *http.Request) {
 	// Parse user ID from path
-	userID, err := h.ParseIDFromPath(r, "userId")
+	userIDStr := chi.URLParam(r, "userId")
+	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
 		return
@@ -83,7 +87,8 @@ func (h *AlbumHandler) GetUserAlbums(w http.ResponseWriter, r *http.Request) {
 // GetAlbum handles getting an album
 func (h *AlbumHandler) GetAlbum(w http.ResponseWriter, r *http.Request) {
 	// Parse album ID from path
-	albumID, err := h.ParseIDFromPath(r, "albumId")
+	albumIDStr := chi.URLParam(r, "albumId")
+	albumID, err := strconv.Atoi(albumIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid album ID"})
 		return
@@ -110,7 +115,8 @@ func (h *AlbumHandler) UpdateAlbum(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse album ID from path
-	albumID, err := h.ParseIDFromPath(r, "albumId")
+	albumIDStr := chi.URLParam(r, "albumId")
+	albumID, err := strconv.Atoi(albumIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid album ID"})
 		return
@@ -118,13 +124,19 @@ func (h *AlbumHandler) UpdateAlbum(w http.ResponseWriter, r *http.Request) {
 
 	// Parse request body
 	var req struct {
-		Name        string `json:"name"`
+		Name        string `json:"name" validate:"required"`
 		Description string `json:"description"`
 		Privacy     string `json:"privacy"`
 	}
 
 	if err := h.DecodeJSONBody(w, r, &req); err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		return
+	}
+
+	// Validate request
+	if err := h.validator.Validate(req); err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]interface{}{"error": "Validation failed", "details": err})
 		return
 	}
 
@@ -149,7 +161,8 @@ func (h *AlbumHandler) DeleteAlbum(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse album ID from path
-	albumID, err := h.ParseIDFromPath(r, "albumId")
+	albumIDStr := chi.URLParam(r, "albumId")
+	albumID, err := strconv.Atoi(albumIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid album ID"})
 		return

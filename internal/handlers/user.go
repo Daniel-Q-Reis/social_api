@@ -1,7 +1,18 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"fmt"
+	"io"
+	"log"
+	"math/big"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"time"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/gocli/social_api/internal/services"
 	"github.com/gocli/social_api/internal/utils"
@@ -25,7 +36,8 @@ func NewUserHandler(userService *services.UserService, validator *utils.Validato
 // GetUserProfile handles getting a user's public profile
 func (h *UserHandler) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	// Parse user ID from path
-	userID, err := h.ParseIDFromPath(r, "userId")
+	userIDStr := chi.URLParam(r, "userId")
+	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
 		return
@@ -164,4 +176,142 @@ func (h *UserHandler) PartialUpdateMe(w http.ResponseWriter, r *http.Request) {
 
 	// Return updated user
 	utils.SendJSONResponse(w, http.StatusOK, user)
+}
+
+// UploadProfilePicture handles uploading a profile picture
+func (h *UserHandler) UploadProfilePicture(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from context
+	userID, err := h.GetUserIDFromContext(r)
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+		return
+	}
+
+	// Parse multipart form with max memory of 10MB
+	err = r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Unable to parse form"})
+		return
+	}
+
+	// Get the file from the form
+	file, handler, err := r.FormFile("profile_picture")
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Unable to get profile picture from form"})
+		return
+	}
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			// Log the error or handle it appropriately in a real application
+			_ = closeErr
+		}
+	}()
+
+	// Validate file type (only allow images)
+	if !isValidImageType(handler.Header.Get("Content-Type")) {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid file type. Only images are allowed"})
+		return
+	}
+
+	// Generate a unique filename
+	filename := generateUniqueFilename(handler.Filename)
+
+	// Create uploads directory if it doesn't exist
+	err = os.MkdirAll("uploads/profile-pictures", os.ModePerm)
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Unable to create uploads directory"})
+		return
+	}
+
+	// Create the file
+	dst, err := os.Create("uploads/profile-pictures/" + filename)
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Unable to create file"})
+		return
+	}
+	defer func() {
+		if closeErr := dst.Close(); closeErr != nil {
+			// Log the error or handle it appropriately in a real application
+			_ = closeErr
+		}
+	}()
+
+	// Copy the uploaded file to the destination
+	_, err = io.Copy(dst, file)
+	if err != nil {
+		utils.SendJSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Unable to save file"})
+		return
+	}
+
+	// Update user's profile picture URL in the database
+	profilePictureURL := "/uploads/profile-pictures/" + filename
+	err = h.userService.UpdateProfilePictureURL(userID, profilePictureURL)
+	if err != nil {
+		// Try to delete the uploaded file since we couldn't update the database
+		if err := os.Remove("uploads/profile-pictures/" + filename); err != nil {
+			// Log the cleanup error, but don't send it to the client
+			log.Printf("WARN: Failed to remove uploaded file %s during cleanup: %v", filename, err)
+		}
+		utils.SendJSONResponse(w, http.StatusInternalServerError, map[string]string{"error": "Unable to update profile picture"})
+		return
+	}
+
+	// Return success response
+	utils.SendJSONResponse(w, http.StatusOK, map[string]string{
+		"message":             "Profile picture uploaded successfully",
+		"profile_picture_url": profilePictureURL,
+	})
+}
+
+// isValidImageType checks if the content type is a valid image type
+func isValidImageType(contentType string) bool {
+	validTypes := []string{
+		"image/jpeg",
+		"image/jpg",
+		"image/png",
+		"image/gif",
+		"image/webp",
+	}
+
+	for _, validType := range validTypes {
+		if contentType == validType {
+			return true
+		}
+	}
+
+	return false
+}
+
+// generateUniqueFilename generates a unique filename by adding a timestamp prefix
+func generateUniqueFilename(originalFilename string) string {
+	// Get file extension
+	ext := filepath.Ext(originalFilename)
+
+	// Generate timestamp
+	timestamp := time.Now().UnixNano()
+
+	// Generate random string
+	randStr := generateRandomString(8)
+
+	// Combine to create unique filename
+	return fmt.Sprintf("%d_%s%s", timestamp, randStr, ext)
+}
+
+// generateRandomString generates a random string of specified length
+func generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	b := make([]byte, length)
+	for i := range b {
+		// Generate a random index
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			// Fallback to a simple approach if crypto/rand fails
+			b[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+			continue
+		}
+		b[i] = charset[n.Int64()]
+	}
+
+	return string(b)
 }

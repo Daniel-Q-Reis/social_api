@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/gocli/social_api/internal/services"
 	"github.com/gocli/social_api/internal/utils"
@@ -25,7 +28,8 @@ func NewFriendHandler(friendService *services.FriendService, validator *utils.Va
 // GetUserFriends handles getting a user's friends
 func (h *FriendHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
 	// Parse user ID from path
-	userID, err := h.ParseIDFromPath(r, "userId")
+	userIDStr := chi.URLParam(r, "userId")
+	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
 		return
@@ -72,7 +76,8 @@ func (h *FriendHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request
 	}
 
 	// Parse target user ID from path
-	toUserID, err := h.ParseIDFromPath(r, "userId")
+	toUserIDStr := chi.URLParam(r, "userId")
+	toUserID, err := strconv.Atoi(toUserIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
 		return
@@ -99,7 +104,8 @@ func (h *FriendHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Parse request ID from path
-	requestID, err := h.ParseIDFromPath(r, "requestId")
+	requestIDStr := chi.URLParam(r, "requestId")
+	requestID, err := strconv.Atoi(requestIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid request ID"})
 		return
@@ -125,7 +131,8 @@ func (h *FriendHandler) RejectFriendRequest(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Parse request ID from path
-	requestID, err := h.ParseIDFromPath(r, "requestId")
+	requestIDStr := chi.URLParam(r, "requestId")
+	requestID, err := strconv.Atoi(requestIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid request ID"})
 		return
@@ -151,7 +158,8 @@ func (h *FriendHandler) UnfriendUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse friend ID from path
-	friendID, err := h.ParseIDFromPath(r, "userId")
+	friendIDStr := chi.URLParam(r, "userId")
+	friendID, err := strconv.Atoi(friendIDStr)
 	if err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
 		return
