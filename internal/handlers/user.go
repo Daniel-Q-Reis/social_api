@@ -11,12 +11,14 @@ import (
 type UserHandler struct {
 	BaseHandler
 	userService *services.UserService
+	validator   *utils.Validator
 }
 
 // NewUserHandler creates a new UserHandler
-func NewUserHandler(userService *services.UserService) *UserHandler {
+func NewUserHandler(userService *services.UserService, validator *utils.Validator) *UserHandler {
 	return &UserHandler{
 		userService: userService,
+		validator:   validator,
 	}
 }
 

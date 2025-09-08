@@ -12,12 +12,14 @@ import (
 type AuthHandler struct {
 	BaseHandler
 	authService *services.AuthService
+	validator   *utils.Validator
 }
 
 // NewAuthHandler creates a new AuthHandler
-func NewAuthHandler(authService *services.AuthService) *AuthHandler {
+func NewAuthHandler(authService *services.AuthService, validator *utils.Validator) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
+		validator:   validator,
 	}
 }
 
@@ -25,14 +27,20 @@ func NewAuthHandler(authService *services.AuthService) *AuthHandler {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Parse request body
 	var req struct {
-		Name      string    `json:"name"`
-		Email     string    `json:"email"`
-		Password  string    `json:"password"`
-		BirthDate time.Time `json:"birth_date"`
+		Name      string    `json:"name" validate:"required"`
+		Email     string    `json:"email" validate:"required,email"`
+		Password  string    `json:"password" validate:"required,min=8"`
+		BirthDate time.Time `json:"birth_date" validate:"required"`
 	}
 
 	if err := h.DecodeJSONBody(w, r, &req); err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		return
+	}
+
+	// Validate request
+	if err := h.validator.Validate(req); err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]interface{}{"error": "Validation failed", "details": err})
 		return
 	}
 
@@ -51,12 +59,18 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Parse request body
 	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email    string `json:"email" validate:"required,email"`
+		Password string `json:"password" validate:"required,min=8"`
 	}
 
 	if err := h.DecodeJSONBody(w, r, &req); err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		return
+	}
+
+	// Validate request
+	if err := h.validator.Validate(req); err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]interface{}{"error": "Validation failed", "details": err})
 		return
 	}
 

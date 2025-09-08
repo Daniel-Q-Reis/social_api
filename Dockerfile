@@ -1,5 +1,8 @@
 # Build stage
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
+
+# Install ca-certificates and build tools
+RUN apk --no-cache add ca-certificates git
 
 # Set working directory
 WORKDIR /app
@@ -9,6 +12,9 @@ COPY go.mod go.sum ./
 
 # Download all dependencies
 RUN go mod download
+
+# Install Goose
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 
 # Copy source code
 COPY . .
@@ -30,6 +36,9 @@ COPY --from=builder /app/social-api .
 
 # Copy migrations
 COPY --from=builder /app/migrations ./migrations
+
+# Copy Goose binary
+COPY --from=builder /go/bin/goose ./goose
 
 # Expose port
 EXPOSE 8080

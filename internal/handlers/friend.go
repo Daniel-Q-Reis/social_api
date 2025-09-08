@@ -11,12 +11,14 @@ import (
 type FriendHandler struct {
 	BaseHandler
 	friendService *services.FriendService
+	validator     *utils.Validator
 }
 
 // NewFriendHandler creates a new FriendHandler
-func NewFriendHandler(friendService *services.FriendService) *FriendHandler {
+func NewFriendHandler(friendService *services.FriendService, validator *utils.Validator) *FriendHandler {
 	return &FriendHandler{
 		friendService: friendService,
+		validator:     validator,
 	}
 }
 

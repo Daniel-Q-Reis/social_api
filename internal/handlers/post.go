@@ -11,12 +11,14 @@ import (
 type PostHandler struct {
 	BaseHandler
 	postService *services.PostService
+	validator   *utils.Validator
 }
 
 // NewPostHandler creates a new PostHandler
-func NewPostHandler(postService *services.PostService) *PostHandler {
+func NewPostHandler(postService *services.PostService, validator *utils.Validator) *PostHandler {
 	return &PostHandler{
 		postService: postService,
+		validator:   validator,
 	}
 }
 
@@ -31,12 +33,18 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	// Parse request body
 	var req struct {
-		Content string `json:"content"`
+		Content string `json:"content" validate:"required"`
 		Privacy string `json:"privacy"`
 	}
 
 	if err := h.DecodeJSONBody(w, r, &req); err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		return
+	}
+
+	// Validate request
+	if err := h.validator.Validate(req); err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]interface{}{"error": "Validation failed", "details": err})
 		return
 	}
 

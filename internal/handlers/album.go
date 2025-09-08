@@ -11,12 +11,14 @@ import (
 type AlbumHandler struct {
 	BaseHandler
 	albumService *services.AlbumService
+	validator    *utils.Validator
 }
 
 // NewAlbumHandler creates a new AlbumHandler
-func NewAlbumHandler(albumService *services.AlbumService) *AlbumHandler {
+func NewAlbumHandler(albumService *services.AlbumService, validator *utils.Validator) *AlbumHandler {
 	return &AlbumHandler{
 		albumService: albumService,
+		validator:    validator,
 	}
 }
 
@@ -31,13 +33,19 @@ func (h *AlbumHandler) CreateAlbum(w http.ResponseWriter, r *http.Request) {
 
 	// Parse request body
 	var req struct {
-		Name        string `json:"name"`
+		Name        string `json:"name" validate:"required"`
 		Description string `json:"description"`
 		Privacy     string `json:"privacy"`
 	}
 
 	if err := h.DecodeJSONBody(w, r, &req); err != nil {
 		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		return
+	}
+
+	// Validate request
+	if err := h.validator.Validate(req); err != nil {
+		utils.SendJSONResponse(w, http.StatusBadRequest, map[string]interface{}{"error": "Validation failed", "details": err})
 		return
 	}
 

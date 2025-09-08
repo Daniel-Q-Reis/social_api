@@ -21,6 +21,9 @@ func main() {
 	// Initialize configuration
 	config := utils.LoadConfig()
 
+	// Initialize validator
+	validator := utils.NewValidator()
+
 	// Initialize database connection
 	db, err := database.Connect(config.DatabaseURL)
 	if err != nil {
@@ -38,6 +41,8 @@ func main() {
 	friendRepo := repositories.NewFriendRepository(db)
 	postRepo := repositories.NewPostRepository(db)
 	albumRepo := repositories.NewAlbumRepository(db)
+	likeRepo := repositories.NewLikeRepository(db)
+	commentRepo := repositories.NewCommentRepository(db)
 
 	// Initialize services
 	authService := services.NewAuthService(authRepo, userRepo, config.JWTSecret, config.RefreshTokenSecret)
@@ -45,13 +50,17 @@ func main() {
 	friendService := services.NewFriendService(friendRepo, userRepo)
 	postService := services.NewPostService(postRepo)
 	albumService := services.NewAlbumService(albumRepo)
+	likeService := services.NewLikeService(likeRepo)
+	commentService := services.NewCommentService(commentRepo, userRepo)
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(authService)
-	userHandler := handlers.NewUserHandler(userService)
-	friendHandler := handlers.NewFriendHandler(friendService)
-	postHandler := handlers.NewPostHandler(postService)
-	albumHandler := handlers.NewAlbumHandler(albumService)
+	authHandler := handlers.NewAuthHandler(authService, validator)
+	userHandler := handlers.NewUserHandler(userService, validator)
+	friendHandler := handlers.NewFriendHandler(friendService, validator)
+	postHandler := handlers.NewPostHandler(postService, validator)
+	albumHandler := handlers.NewAlbumHandler(albumService, validator)
+	likeHandler := handlers.NewLikeHandler(likeService, validator)
+	commentHandler := handlers.NewCommentHandler(commentService, validator)
 
 	// Setup routes
 	router := http.NewServeMux()
@@ -100,6 +109,16 @@ func main() {
 	protectedRouter.HandleFunc("PUT /api/v1/albums/{albumId}", albumHandler.UpdateAlbum)
 	protectedRouter.HandleFunc("DELETE /api/v1/albums/{albumId}", albumHandler.DeleteAlbum)
 
+	// Like routes
+	protectedRouter.HandleFunc("POST /api/v1/{resourceType}/{resourceId}/like", likeHandler.LikeResource)
+	protectedRouter.HandleFunc("DELETE /api/v1/{resourceType}/{resourceId}/like", likeHandler.UnlikeResource)
+	protectedRouter.HandleFunc("GET /api/v1/{resourceType}/{resourceId}/likes", likeHandler.GetLikesForResource)
+
+	// Comment routes
+	protectedRouter.HandleFunc("POST /api/v1/{resourceType}/{resourceId}/comments", commentHandler.CreateComment)
+	protectedRouter.HandleFunc("GET /api/v1/{resourceType}/{resourceId}/comments", commentHandler.GetCommentsForResource)
+	protectedRouter.HandleFunc("DELETE /api/v1/comments/{commentId}", commentHandler.DeleteComment)
+
 	// Apply middleware to protected routes
 	protectedHandler := middleware.AuthMiddleware(protectedRouter, authService)
 
@@ -109,7 +128,7 @@ func main() {
 	// Create HTTP server
 	server := &http.Server{
 		Addr:    ":" + config.Port,
-		Handler: protectedRouter,
+		Handler: router,
 	}
 
 	// Start server in a goroutine
