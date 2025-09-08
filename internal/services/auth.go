@@ -1,6 +1,8 @@
 package services
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -131,7 +133,10 @@ func (s *AuthService) generateAccessToken(userID int) (string, error) {
 // generateRefreshToken generates a refresh token and stores it in the database
 func (s *AuthService) generateRefreshToken(userID int) (string, error) {
 	// Generate random token
-	token := generateRandomString(32)
+	token, err := generateRandomString(32)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate random token: %w", err)
+	}
 
 	// Store in database
 	refreshToken := &models.RefreshToken{
@@ -149,12 +154,11 @@ func (s *AuthService) generateRefreshToken(userID int) (string, error) {
 }
 
 // generateRandomString generates a random string of specified length
-func generateRandomString(length int) string {
-	// In a real implementation, you would use a cryptographically secure random generator
-	// For simplicity, we'll return a fixed string here
-	// In practice, you would use something like:
-	// b := make([]byte, length)
-	// rand.Read(b)
-	// return base64.URLEncoding.EncodeToString(b)
-	return "random_token_string_for_demo_purposes"
+func generateRandomString(length int) (string, error) {
+	b := make([]byte, length)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b)[:length], nil
 }
