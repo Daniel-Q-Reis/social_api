@@ -1,123 +1,182 @@
 # Social Media API
 
-A complete, production-ready Social Media API built with Go following best practices.
+Welcome to the Social Media API, a robust, production-ready backend service built with Go. This project showcases a complete set of features for a modern social media platform, architected with best practices and clean code principles.
 
-## Features
+## 🚀 Features
 
-- User authentication with JWT
-- Profile management
-- Friendships and connections
-- Photo albums and media management
-- News feed and posts
-- Likes and comments
+* **User Authentication**: Secure user registration and login using JWT (Access and Refresh Tokens).
+* **Profile Management**: Full control over user profiles, including profile picture uploads.
+* **Social Graph**: Functionality for friendships, including sending, accepting, and rejecting friend requests.
+* **Content Creation**: Users can create, edit, and delete posts with different privacy levels (public, friends, only me).
+* **News Feed**: A personalized news feed to view posts from friends.
+* **Media Management**: Support for photo albums and media uploads.
+* **Engagement**: Interactive features like likes and comments on posts and other resources.
 
-## Architecture
+## 🏛️ Architecture
 
-This project follows Clean Architecture principles with the following layers:
+This project is built upon the principles of **Clean Architecture** to ensure a scalable, maintainable, and testable codebase. The project is organized into the following layers:
 
-- `cmd/api` - Application entry point
-- `internal/handlers` - HTTP handlers and routing
-- `internal/services` - Business logic
-- `internal/repositories` - Data access layer
-- `internal/models` - Data structures and domain models
-- `internal/middleware` - HTTP middleware
-- `internal/database` - Database connection and setup
-- `internal/utils` - Utility functions
-- `migrations` - Database schema migrations
+* `cmd/api`: The application's entry point, responsible for bootstrapping the server.
+* `internal/handlers`: HTTP handlers that manage requests and responses.
+* `internal/services`: The core business logic of the application resides here.
+* `internal/repositories`: The data access layer, responsible for database interactions.
+* `internal/models`: Defines the data structures and domain models.
+* `internal/middleware`: Custom HTTP middleware, including authentication.
+* `internal/database`: Manages the database connection and setup.
+* `internal/utils`: Contains utility functions for configuration, validation, and responses.
+* `migrations`: Database schema migrations managed by Goose.
 
-## Setup
+## 🛠️ Getting Started
 
-1. Install dependencies:
-   ```
-   go mod tidy
-   ```
+Follow these instructions to get the project up and running on your local machine.
 
-2. Run the application:
-   ```
-   go run cmd/api/main.go
-   ```
+### Prerequisites
 
-## Database Migrations
+* Go (version 1.24 or later)
+* Docker and Docker Compose
+* [Goose](https://github.com/pressly/goose) for database migrations
 
-This project uses Goose for database migrations. To install Goose:
+### Installation & Setup
 
-```
-go install github.com/pressly/goose/v3/cmd/goose@latest
-```
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/daniel-q-reis/social_api.git](https://github.com/daniel-q-reis/social_api.git)
+    cd social_api
+    ```
 
-To run migrations:
-```
-goose -dir migrations postgres "postgres://postgres:postgres@localhost:5432/social_api?sslmode=disable" up
-```
+2.  **Install dependencies:**
+    ```bash
+    go mod tidy
+    ```
 
-## Testing
+3.  **Run with Docker (Recommended):**
+    The easiest way to get started is by using Docker Compose, which will set up the database and run the application.
+    ```bash
+    docker-compose up --build
+    ```
+    The API will be available at `http://localhost:8080`.
 
-Run unit tests:
-```
-go test ./...
-```
+4.  **Running Locally (Without Docker):**
+    If you prefer to run the application and database manually:
 
-Run integration tests (requires Docker):
-```
-docker-compose up -d
-go test -tags=integration ./...
-```
+    * **Start the PostgreSQL database:** You can use Docker to easily spin up a Postgres instance.
+        ```bash
+        docker run --name social-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres -e POSTGRES_DB=social_api -p 5432:5432 -d postgres:13
+        ```
 
-## Linting
+    * **Run database migrations:** This project uses Goose for managing database schema.
+        ```bash
+        # Install Goose if you haven't already
+        go install [github.com/pressly/goose/v3/cmd/goose@latest](https://github.com/pressly/goose/v3/cmd/goose@latest)
 
-This project uses golangci-lint for code quality checks.
+        # Run migrations
+        goose -dir migrations postgres "postgres://postgres:postgres@localhost:5432/social_api?sslmode=disable" up
+        ```
 
-To install golangci-lint:
-```
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-```
+    * **Run the application:**
+        ```bash
+        go run cmd/api/main.go
+        ```
 
-Run the linter:
-```
-golangci-lint run
-```
+## 🧪 Testing and Linting
 
-## Docker
+### Running Tests
 
-To build and run the application with Docker:
-```
-docker-compose up --build
-```
+* **Unit Tests:**
+    ```bash
+    go test ./...
+    ```
 
-## API Endpoints
+* **Integration Tests:** These tests require a running database. Ensure the test database is up (e.g., via `docker-compose up -d db`).
+    ```bash
+    go test -tags=integration ./...
+    ```
+
+### Linting
+
+This project uses `golangci-lint` for ensuring code quality.
+
+* **Install linter:**
+    ```bash
+    go install [github.com/golangci/golangci-lint/cmd/golangci-lint@latest](https://github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
+    ```
+
+* **Run linter:**
+    ```bash
+    golangci-lint run
+    ```
+
+## 📜 API Endpoints
+
+All endpoints are prefixed with `/api/v1`.
 
 ### Authentication
-- `POST /api/v1/auth/register` - Register a new user
-- `POST /api/v1/auth/login` - Login and get JWT tokens
-- `POST /api/v1/auth/refresh` - Refresh access token
-- `POST /api/v1/auth/logout` - Logout and revoke refresh token
+
+| Method | Endpoint              | Description                      |
+| :----- | :-------------------- | :------------------------------- |
+| `POST` | `/auth/register`      | Register a new user              |
+| `POST` | `/auth/login`         | Login and get JWT tokens         |
+| `POST` | `/auth/refresh`       | Refresh access token             |
+| `POST` | `/auth/logout`        | Logout and revoke refresh token  |
 
 ### Users
-- `GET /api/v1/users/{userId}` - Get a user's public profile
-- `GET /api/v1/users/search?q={query}` - Search for users
-- `GET /api/v1/me` - Get the logged-in user's full profile
-- `PUT /api/v1/me` - Full update of the logged-in user's profile
-- `PATCH /api/v1/me` - Partial update of the logged-in user's profile
+
+| Method  | Endpoint                  | Description                                |
+| :------ | :------------------------ | :----------------------------------------- |
+| `GET`   | `/users/{userId}`         | Get a user's public profile                |
+| `GET`   | `/users/search?q={query}` | Search for users by name or email          |
+| `GET`   | `/me`                     | Get the logged-in user's full profile      |
+| `PUT`   | `/me`                     | Full update of the logged-in user's profile |
+| `PATCH` | `/me`                     | Partial update of the user's profile       |
+| `POST`  | `/me/profile-picture`     | Upload a profile picture for the user      |
 
 ### Friendships
-- `GET /api/v1/users/{userId}/friends` - List a user's friends
-- `GET /api/v1/me/friend-requests` - List pending friend requests for the logged-in user
-- `POST /api/v1/users/{userId}/friend-requests` - Send a friend request
-- `POST /api/v1/friend-requests/{requestId}/accept` - Accept a friend request
-- `POST /api/v1/friend-requests/{requestId}/reject` - Reject a friend request
-- `DELETE /api/v1/users/{userId}/friends` - Unfriend a user
 
-### Albums and Photos
-- `POST /api/v1/me/albums` - Create a new photo album
-- `GET /api/v1/users/{userId}/albums` - List a user's albums
-- `GET /api/v1/albums/{albumId}` - Get album details
-- `PUT /api/v1/albums/{albumId}` - Update album info
-- `DELETE /api/v1/albums/{albumId}` - Delete an album
+| Method   | Endpoint                               | Description                                      |
+| :------- | :------------------------------------- | :----------------------------------------------- |
+| `GET`    | `/users/{userId}/friends`              | List a user's friends                            |
+| `GET`    | `/me/friend-requests`                  | List pending friend requests for the logged-in user |
+| `POST`   | `/users/{userId}/friend-requests`      | Send a friend request to a user                  |
+| `POST`   | `/friend-requests/{requestId}/accept`  | Accept a pending friend request                  |
+| `POST`   | `/friend-requests/{requestId}/reject`  | Reject a pending friend request                  |
+| `DELETE` | `/users/{userId}/friends`              | Unfriend a user                                  |
 
-### Feed and Posts
-- `POST /api/v1/posts` - Create a new post
-- `GET /api/v1/feed` - Get the personalized news feed
-- `GET /api/v1/users/{userId}/posts` - List a user's posts
-- `GET /api/v1/posts/{postId}` - Get a single post
-- `PUT /api/v1/posts/{postId}` - Edit a post
-- `DELETE /api/v1/posts/{postId}` - Delete a post
+### Posts & Feed
+
+| Method   | Endpoint                  | Description                     |
+| :------- | :------------------------ | :------------------------------ |
+| `POST`   | `/posts`                  | Create a new post               |
+| `GET`    | `/feed`                   | Get the personalized news feed  |
+| `GET`    | `/users/{userId}/posts`   | List a user's posts             |
+| `GET`    | `/posts/{postId}`         | Get a single post               |
+| `PUT`    | `/posts/{postId}`         | Edit an existing post           |
+| `DELETE` | `/posts/{postId}`         | Delete a post                   |
+
+### Albums & Photos
+
+| Method   | Endpoint                   | Description                      |
+| :------- | :------------------------- | :------------------------------- |
+| `POST`   | `/me/albums`               | Create a new photo album         |
+| `GET`    | `/users/{userId}/albums`   | List a user's photo albums       |
+| `GET`    | `/albums/{albumId}`        | Get details for a single album   |
+| `PUT`    | `/albums/{albumId}`        | Update album information         |
+| `DELETE` | `/albums/{albumId}`        | Delete an album and its photos   |
+
+### Likes & Comments
+
+| Method   | Endpoint                                 | Description                        |
+| :------- | :--------------------------------------- | :--------------------------------- |
+| `POST`   | `/{resourceType}/{resourceId}/like`      | Like a resource (e.g., post, photo) |
+| `DELETE` | `/{resourceType}/{resourceId}/like`      | Unlike a resource                  |
+| `GET`    | `/{resourceType}/{resourceId}/likes`     | Get likes for a resource           |
+| `POST`   | `/{resourceType}/{resourceId}/comments`  | Add a comment to a resource        |
+| `GET`    | `/{resourceType}/{resourceId}/comments`  | Get comments for a resource        |
+| `DELETE` | `/comments/{commentId}`                  | Delete a comment                   |
+
+## 🙏 Acknowledgments
+
+This project was developed with the significant use of AI-powered tools and technologies. Generative AI was instrumental in accelerating development, generating boilerplate code, writing tests, and providing architectural insights, leading to a more efficient and robust development process.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
