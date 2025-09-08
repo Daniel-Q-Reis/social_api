@@ -22,6 +22,27 @@ COPY . .
 # Build the application
 RUN go build -o social-api cmd/api/main.go
 
+# Development stage
+FROM golang:1.24-alpine AS development
+
+# Install ca-certificates and build tools
+RUN apk --no-cache add ca-certificates git
+
+# Set working directory
+WORKDIR /app
+
+# Copy go mod and sum files
+COPY go.mod go.sum ./
+
+# Download all dependencies
+RUN go mod download
+
+# Install Goose
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
+# Copy source code
+COPY . .
+
 # Final stage
 FROM alpine:latest
 
