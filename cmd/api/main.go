@@ -14,7 +14,7 @@ import (
 
 	"github.com/gocli/social_api/internal/database"
 	"github.com/gocli/social_api/internal/handlers"
-	authmiddleware "github.com/gocli/social_api/internal/middleware"
+	middlewares "github.com/gocli/social_api/internal/middleware"
 	"github.com/gocli/social_api/internal/repositories"
 	"github.com/gocli/social_api/internal/services"
 	"github.com/gocli/social_api/internal/utils"
@@ -73,6 +73,7 @@ func main() {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
+	router.Use(middlewares.CORSMiddleware) // Add CORS middleware
 
 	// Health check endpoint
 	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +88,7 @@ func main() {
 
 	// Protected routes
 	router.Group(func(r chi.Router) {
-		r.Use(authmiddleware.AuthMiddleware(authService))
+		r.Use(middlewares.AuthMiddleware(authService))
 
 		// User routes
 		r.Get("/api/v1/users/{userId}", userHandler.GetUserProfile)
