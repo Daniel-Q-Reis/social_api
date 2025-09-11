@@ -73,7 +73,7 @@ func main() {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-	router.Use(middlewares.CORSMiddleware) // Add CORS middleware
+	router.Use(middlewares.CORSMiddleware)
 
 	// Health check endpoint
 	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
